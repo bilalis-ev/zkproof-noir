@@ -1,6 +1,6 @@
-fn main(w: Field, y: pub Field) {
-    // Prove knowledge of w such that 2*w^2 = y
-    // Field:from(2) means embed the integer 2 into the finite field used by the circuit
-    let lhs = Field::from(2) * w * w;
-    assert(lhs == y);
+use std::hash::pedersen_hash;
+
+fn main(balances: [Field; 4], old_root: pub Field) {
+    let new_root = pedersen_hash(balances);
+    assert(new_root == old_root);
 }

@@ -1,2 +1,2 @@
-w = "5"
-y = "50"
+balances = ["10", "20", "30", "40"]
+old_root = "0x0241ae47ce8cdd9683574f57e602860f29fcd7f97ab6be2e7284be765a715f21"
