@@ -1,0 +1,6 @@
+# Noir / Nargo artifacts
+target/
+
+# OS / editor noise
+.DS_Store
+.vscode/
