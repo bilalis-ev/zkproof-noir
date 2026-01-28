@@ -16,43 +16,61 @@ fn hash_inode(left_child: Field, right_child: Field) -> Field {
     pedersen_hash([left_child, right_child])
 }
 
-struct Tx {
-    from: u32,
-    to: u32,
-    amount: u32,
+// current_node: hash of current node
+// index: position of current node in merkle tree
+// siblings: an array of siblings of current node on each level respectively
+fn hash_root(mut current_node: Field, index: u32, siblings: [Field; DEPTH]) -> Field {
+    for i in 0..DEPTH {
+        let bit = (index >> i) & 1;
+        let sibling = siblings[i];
+
+        if bit == 0 {
+            current_node = hash_inode(current_node, sibling);
+        } else {
+            current_node = hash_inode(sibling, current_node);
+        }
+    }
+    current_node
 }
 
-fn main(old_balances: [u32; 4], txs: [Tx; 2], old_root: pub Field, new_root: pub Field) {
-    // verify that the old balances hash to the old root
-    let old_balances_field: [Field; 4] = [
-        old_balances[0] as Field,
-        old_balances[1] as Field,
-        old_balances[2] as Field,
-        old_balances[3] as Field,
-    ];
+fn main(balance: u32, nonce: u32, index: u32, siblings: [Field; DEPTH], root: pub Field) {
+    assert(index < 4);
 
-    assert(pedersen_hash(old_balances_field) == old_root);
+    let leaf = hash_leaf(balance, nonce);
+    let new_root = hash_root(leaf, index, siblings);
 
-    let mut balances = old_balances;
+    assert(new_root == root);
+}
 
-    for i in 0..2 {
-        let tx = txs[i];
+#[test]
+fn merkle_test() {
+    // 4 example accounts
+    let b0: u32 = 10;
+    let n0: u32 = 0;
+    let b1: u32 = 20;
+    let n1: u32 = 0;
+    let b2: u32 = 30;
+    let n2: u32 = 0;
+    let b3: u32 = 40;
+    let n3: u32 = 0;
 
-        // verify that the account indices are within bounds
-        assert(tx.from < 4);
-        assert(tx.to < 4);
+    // leaves
+    let l0 = hash_leaf(b0, n0);
+    let l1 = hash_leaf(b1, n1);
+    let l2 = hash_leaf(b2, n2);
+    let l3 = hash_leaf(b3, n3);
 
-        // verify that the sender's balance is sufficient for the transaction
-        assert(balances[tx.from] >= tx.amount);
+    // internal nodes
+    let h01 = hash_inode(l0, l1);
+    let h23 = hash_inode(l2, l3);
 
-        // apply the transfer
-        balances[tx.from] -= tx.amount;
-        balances[tx.to] += tx.amount;
-    }
+    // root
+    let root = hash_inode(h01, h23);
 
-    // verify that the new balances hash to the new root
-    let new_balances_field: [Field; 4] =
-        [balances[0] as Field, balances[1] as Field, balances[2] as Field, balances[3] as Field];
+    // prove inclusion for index 2 (binary 10)
+    let index: u32 = 0;
+    let siblings: [Field; 2] = [l1, h23];
 
-    assert(pedersen_hash(new_balances_field) == new_root);
+    // call the circuit function
+    main(b0, n0, index, siblings, root);
 }
