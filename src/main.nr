@@ -1,5 +1,16 @@
 use std::hash::pedersen_hash;
 
+global DEPTH: u32 = 2;
+
+// computes the merkle tree leaf by hashing the given account's balance and nonce
+fn hash_leaf(balance: u32, nonce: u32) -> Field {
+    // balance and nonce are represented as ints for safe arithmetic and are then converted to fields for hashing
+    let balance_field = balance as Field;
+    let nonce_field = nonce as Field;
+
+    pedersen_hash([balance_field, nonce_field])
+}
+
 struct Tx {
     from: u32,
     to: u32,
