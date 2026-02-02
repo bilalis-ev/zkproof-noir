@@ -1,5 +1,19 @@
 use std::hash::pedersen_hash;
 
+struct Account {
+    balance: u32,
+    nonce: u32, // transaction counter
+    // public key coordinates on the elliptic curve
+    pub_key_x: Field,
+    puk_key_y: Field,
+}
+
+struct Transaction {
+    amount: u32,
+    sender_idx: u32,
+    receiver_idx: u32,
+}
+
 global DEPTH: u32 = 2;
 
 // computes the merkle tree leaf by hashing the account's balance and nonce
@@ -44,7 +58,7 @@ fn main(balance: u32, nonce: u32, index: u32, siblings: [Field; DEPTH], root: pu
 
 #[test]
 fn merkle_test() {
-    // 4 example accounts
+    // balance and nonce of each of the 4 accounts
     let b0: u32 = 10;
     let n0: u32 = 0;
     let b1: u32 = 20;
@@ -54,20 +68,20 @@ fn merkle_test() {
     let b3: u32 = 40;
     let n3: u32 = 0;
 
-    // leaves
+    // leaf hashes
     let l0 = hash_leaf(b0, n0);
     let l1 = hash_leaf(b1, n1);
     let l2 = hash_leaf(b2, n2);
     let l3 = hash_leaf(b3, n3);
 
-    // internal nodes
+    // internal node hashes
     let h01 = hash_inode(l0, l1);
     let h23 = hash_inode(l2, l3);
 
-    // root
+    // root hash
     let root = hash_inode(h01, h23);
 
-    // prove inclusion for index 2 (binary 10)
+    // prove inclusion for index 0 (binary 10)
     let index: u32 = 0;
     let siblings: [Field; 2] = [l1, h23];
 
