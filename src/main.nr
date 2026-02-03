@@ -1,5 +1,5 @@
 use schnorr;
-use std::hash::pedersen_hash;
+use std::{hash::pedersen_hash, embedded_curve_ops::EmbeddedCurvePoint};
 
 global DEPTH: u32 = 2;
 
@@ -22,6 +22,10 @@ fn hash_account(acc: Account) -> Field {
     pedersen_hash(
         [acc.balance as Field, acc.nonce as Field, acc.pub_key_x, acc.pub_key_y],
     )
+}
+
+fn main(sender: Account, sender_siblings:, receiver: Account, receiver_siblings:, tx: Transaction, signature: [u8; 64], msg_hash[u8, 32], old_root: pub Field) -> pub Field {
+    let pub_key = EmbeddedCurvePoint { x: sender.pub_key_x, y: sender.pub_key_y, is_infinite: false};
 }
 
 // computes the merkle tree leaf by hashing the account's balance and nonce
