@@ -57,10 +57,13 @@ fn main(
     old_root: pub Field,
     new_root: pub Field,
 ) {
+    // tx integrity validation: self-transfer and sufficient funds
+    assert(tx.sender_idx != tx.receiver_idx);
+    assert(sender.balance >= tx.amount);
+
     // signature verification
-    // combine coordinates into a single point
     let pub_key =
-        EmbeddedCurvePoint { x: sender.pub_key_x, y: sender.pub_key_y, is_infinite: false };
+        EmbeddedCurvePoint { x: sender.pub_key_x, y: sender.pub_key_y, is_infinite: false }; // combine coordinates into a single point
     let is_valid = schnorr::verify_signature(pub_key, signature, msg_hash);
     assert(is_valid);
 
@@ -69,9 +72,7 @@ fn main(
     let old_root_check = hash_root(sender_leaf, tx.sender_idx, sender_siblings);
     assert(old_root_check == old_root);
 
-    // tx validation & nonce update
-    assert(sender.balance >= tx.amount);
-
+    // sender state update
     let mut updated_sender = sender;
     updated_sender.balance -= tx.amount;
     updated_sender.nonce += 1;
