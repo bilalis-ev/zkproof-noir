@@ -1,5 +1,5 @@
 use schnorr;
-use std::{hash::pedersen_hash, embedded_curve_ops::EmbeddedCurvePoint};
+use std::{embedded_curve_ops::EmbeddedCurvePoint, hash::pedersen_hash};
 
 global DEPTH: u32 = 2;
 
@@ -24,19 +24,6 @@ fn hash_account(acc: Account) -> Field {
     )
 }
 
-fn main(sender: Account, sender_siblings:, receiver: Account, receiver_siblings:, tx: Transaction, signature: [u8; 64], msg_hash[u8, 32], old_root: pub Field) -> pub Field {
-    let pub_key = EmbeddedCurvePoint { x: sender.pub_key_x, y: sender.pub_key_y, is_infinite: false};
-}
-
-// computes the merkle tree leaf by hashing the account's balance and nonce
-fn hash_leaf(balance: u32, nonce: u32) -> Field {
-    // balance and nonce are represented as ints for safe arithmetic and are then converted to fields for hashing
-    let balance_field = balance as Field;
-    let nonce_field = nonce as Field;
-
-    pedersen_hash([balance_field, nonce_field])
-}
-
 // computes the merkle tree inner node by hashing the hashes of its children
 fn hash_inode(left_child: Field, right_child: Field) -> Field {
     pedersen_hash([left_child, right_child])
@@ -59,44 +46,55 @@ fn hash_root(mut current_node: Field, index: u32, siblings: [Field; DEPTH]) -> F
     current_node
 }
 
-fn main(balance: u32, nonce: u32, index: u32, siblings: [Field; DEPTH], root: pub Field) {
-    assert(index < 4);
+fn main(
+    sender: Account,
+    sender_siblings: [Field; DEPTH],
+    receiver: Account,
+    receiver_siblings: [Field; DEPTH],
+    tx: Transaction,
+    signature: [u8; 64],
+    msg_hash: [u8; 32],
+    old_root: pub Field,
+    new_root: pub Field,
+) {
+    // signature verification
+    // combine coordinates into a single point
+    let pub_key =
+        EmbeddedCurvePoint { x: sender.pub_key_x, y: sender.pub_key_y, is_infinite: false };
+    let is_valid = schnorr::verify_signature(pub_key, signature, msg_hash);
+    assert(is_valid);
 
-    let leaf = hash_leaf(balance, nonce);
-    let new_root = hash_root(leaf, index, siblings);
+    // verification of sender's existence in current state
+    let sender_leaf = hash_account(sender);
+    let old_root_check = hash_root(sender_leaf, tx.sender_idx, sender_siblings);
+    assert(old_root_check == old_root);
 
-    assert(new_root == root);
-}
+    // tx validation & nonce update
+    assert(sender.balance >= tx.amount);
 
-#[test]
-fn merkle_test() {
-    // balance and nonce of each of the 4 accounts
-    let b0: u32 = 10;
-    let n0: u32 = 0;
-    let b1: u32 = 20;
-    let n1: u32 = 0;
-    let b2: u32 = 30;
-    let n2: u32 = 0;
-    let b3: u32 = 40;
-    let n3: u32 = 0;
+    let mut updated_sender = sender;
+    updated_sender.balance -= tx.amount;
+    updated_sender.nonce += 1;
 
-    // leaf hashes
-    let l0 = hash_leaf(b0, n0);
-    let l1 = hash_leaf(b1, n1);
-    let l2 = hash_leaf(b2, n2);
-    let l3 = hash_leaf(b3, n3);
+    let new_sender_leaf = hash_account(updated_sender);
 
-    // internal node hashes
-    let h01 = hash_inode(l0, l1);
-    let h23 = hash_inode(l2, l3);
+    // intermediate root calulation - after the sender pays but before the receiver is paid
+    let intermediate_root = hash_root(new_sender_leaf, tx.sender_idx, sender_siblings);
 
-    // root hash
-    let root = hash_inode(h01, h23);
+    // verification of receiver's existence in current state
+    let receiver_leaf = hash_account(receiver);
+    let inner_root_check = hash_root(receiver_leaf, tx.receiver_idx, receiver_siblings);
 
-    // prove inclusion for index 0 (binary 10)
-    let index: u32 = 0;
-    let siblings: [Field; 2] = [l1, h23];
+    assert(intermediate_root == inner_root_check);
 
-    // call the circuit function
-    main(b0, n0, index, siblings, root);
+    // receiver state update
+    let mut updated_receiver = receiver;
+    updated_receiver.balance += tx.amount;
+
+    let new_receiver_leaf = hash_account(updated_receiver);
+
+    // final root calculation
+    let calculated_new_root = hash_root(new_receiver_leaf, tx.receiver_idx, receiver_siblings);
+
+    assert(calculated_new_root == new_root);
 }
