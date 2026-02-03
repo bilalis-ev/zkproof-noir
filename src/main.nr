@@ -1,11 +1,14 @@
+use schnorr;
 use std::hash::pedersen_hash;
+
+global DEPTH: u32 = 2;
 
 struct Account {
     balance: u32,
     nonce: u32, // transaction counter
     // public key coordinates on the elliptic curve
     pub_key_x: Field,
-    puk_key_y: Field,
+    pub_key_y: Field,
 }
 
 struct Transaction {
@@ -14,7 +17,12 @@ struct Transaction {
     receiver_idx: u32,
 }
 
-global DEPTH: u32 = 2;
+// compute hash using account data
+fn hash_account(acc: Account) -> Field {
+    pedersen_hash(
+        [acc.balance as Field, acc.nonce as Field, acc.pub_key_x, acc.pub_key_y],
+    )
+}
 
 // computes the merkle tree leaf by hashing the account's balance and nonce
 fn hash_leaf(balance: u32, nonce: u32) -> Field {
