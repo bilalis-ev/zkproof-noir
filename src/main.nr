@@ -2,6 +2,7 @@ use schnorr;
 use std::{embedded_curve_ops::EmbeddedCurvePoint, hash::pedersen_hash};
 
 global DEPTH: u32 = 2;
+global BATCH_SIZE: u32 = 4;
 
 struct Account {
     balance: u32,
@@ -47,55 +48,67 @@ fn hash_root(mut current_node: Field, index: u32, siblings: [Field; DEPTH]) -> F
 }
 
 fn main(
-    sender: Account,
-    sender_siblings: [Field; DEPTH],
-    receiver: Account,
-    receiver_siblings: [Field; DEPTH],
-    tx: Transaction,
-    signature: [u8; 64],
-    msg_hash: [u8; 32],
+    senders: [Account; BATCH_SIZE],
+    sender_siblings: [[Field; DEPTH]; BATCH_SIZE],
+    receivers: [Account; BATCH_SIZE],
+    receiver_siblings: [[Field; DEPTH]; BATCH_SIZE],
+    txs: [Transaction; BATCH_SIZE],
+    signatures: [[u8; 64]; BATCH_SIZE],
+    msg_hashes: [[u8; 32]; BATCH_SIZE],
     old_root: pub Field,
     new_root: pub Field,
 ) {
-    // tx integrity validation: self-transfer and sufficient funds
-    assert(tx.sender_idx != tx.receiver_idx);
-    assert(sender.balance >= tx.amount);
+    let mut current_root = old_root;
 
-    // signature verification
-    let pub_key =
-        EmbeddedCurvePoint { x: sender.pub_key_x, y: sender.pub_key_y, is_infinite: false }; // combine coordinates into a single point
-    let is_valid = schnorr::verify_signature(pub_key, signature, msg_hash);
-    assert(is_valid);
+    for i in 0..BATCH_SIZE {
+        let tx = txs[i];
+        let sender = senders[i];
+        let receiver = receivers[i];
+        let signature = signatures[i];
+        let msg_hash = msg_hashes[i];
+        let receiver_sibling = receiver_siblings[i];
+        let sender_sibling = sender_siblings[i];
 
-    // verification of sender's existence in current state
-    let sender_leaf = hash_account(sender);
-    let old_root_check = hash_root(sender_leaf, tx.sender_idx, sender_siblings);
-    assert(old_root_check == old_root);
+        // tx integrity
+        assert(tx.sender_idx != tx.receiver_idx); // self-transfer
+        assert(sender.balance >= tx.amount); // sufficient balance
 
-    // sender state update
-    let mut updated_sender = sender;
-    updated_sender.balance -= tx.amount;
-    updated_sender.nonce += 1;
+        // signature verification
+        let pub_key =
+            EmbeddedCurvePoint { x: sender.pub_key_x, y: sender.pub_key_y, is_infinite: false }; // combine coordinates into a single point
+        let is_valid = schnorr::verify_signature(pub_key, signature, msg_hash);
+        assert(is_valid);
 
-    let new_sender_leaf = hash_account(updated_sender);
+        // verification of sender's existence in current state
+        let sender_leaf = hash_account(sender);
+        let root_check = hash_root(sender_leaf, tx.sender_idx, sender_sibling);
+        assert(root_check == current_root);
 
-    // intermediate root calulation - after the sender pays but before the receiver is paid
-    let intermediate_root = hash_root(new_sender_leaf, tx.sender_idx, sender_siblings);
+        // sender state update
+        let mut updated_sender = sender;
+        updated_sender.balance -= tx.amount;
+        updated_sender.nonce += 1;
 
-    // verification of receiver's existence in current state
-    let receiver_leaf = hash_account(receiver);
-    let inner_root_check = hash_root(receiver_leaf, tx.receiver_idx, receiver_siblings);
+        let new_sender_leaf = hash_account(updated_sender);
 
-    assert(intermediate_root == inner_root_check);
+        // root update
+        current_root = hash_root(new_sender_leaf, tx.sender_idx, sender_sibling);
 
-    // receiver state update
-    let mut updated_receiver = receiver;
-    updated_receiver.balance += tx.amount;
+        // verification of receiver's existence in current state
+        let receiver_leaf = hash_account(receiver);
+        let receiver_root_check = hash_root(receiver_leaf, tx.receiver_idx, receiver_sibling);
 
-    let new_receiver_leaf = hash_account(updated_receiver);
+        assert(receiver_root_check == current_root);
 
-    // final root calculation
-    let calculated_new_root = hash_root(new_receiver_leaf, tx.receiver_idx, receiver_siblings);
+        // receiver state update
+        let mut updated_receiver = receiver;
+        updated_receiver.balance += tx.amount;
 
-    assert(calculated_new_root == new_root);
+        let new_receiver_leaf = hash_account(updated_receiver);
+
+        // final root calculation
+        current_root = hash_root(new_receiver_leaf, tx.receiver_idx, receiver_sibling);
+    }
+
+    assert(current_root == new_root);
 }
