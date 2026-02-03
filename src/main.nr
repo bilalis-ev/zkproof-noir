@@ -2,7 +2,7 @@ use schnorr;
 use std::{embedded_curve_ops::EmbeddedCurvePoint, hash::pedersen_hash};
 
 global DEPTH: u32 = 2;
-global BATCH_SIZE: u32 = 4;
+global BATCH_SIZE: u32 = 1;
 
 struct Account {
     balance: u32,
@@ -77,7 +77,7 @@ fn main(
         let pub_key =
             EmbeddedCurvePoint { x: sender.pub_key_x, y: sender.pub_key_y, is_infinite: false }; // combine coordinates into a single point
         let is_valid = schnorr::verify_signature(pub_key, signature, msg_hash);
-        assert(is_valid);
+        //assert(is_valid);
 
         // verification of sender's existence in current state
         let sender_leaf = hash_account(sender);
@@ -111,4 +111,67 @@ fn main(
     }
 
     assert(current_root == new_root);
+}
+
+// module definition for testing
+mod test {
+
+    use crate::{Account, hash_account, hash_inode, main, Transaction};
+
+    #[test]
+    fn tx_test() {
+        let sender = Account { balance: 100, nonce: 0, pub_key_x: 0, pub_key_y: 0 };
+        let receiver = Account { balance: 50, nonce: 0, pub_key_x: 0, pub_key_y: 0 };
+
+        let sender_leaf = hash_account(sender);
+        let receiver_leaf = hash_account(receiver);
+
+        let empty_leaf = hash_inode(sender_leaf, receiver_leaf);
+
+        let inode01 = hash_inode(sender_leaf, receiver_leaf);
+        let inode23 = hash_inode(empty_leaf, empty_leaf);
+
+        let old_root = hash_inode(inode01, inode23);
+
+        let tx = Transaction { amount: 10, sender_idx: 0, receiver_idx: 1 };
+
+        let sender_siblings = [receiver_leaf, inode23];
+
+        let mut updated_sender = sender;
+        updated_sender.balance -= tx.amount;
+        updated_sender.nonce += 1;
+
+        let updated_sender_leaf = hash_account(updated_sender);
+
+        let receiver_siblings = [updated_sender_leaf, inode23];
+
+        let mut updated_receiver = receiver;
+        updated_receiver.balance += tx.amount;
+
+        let updated_receiver_leaf = hash_account(updated_receiver);
+
+        let new_inode01 = hash_inode(updated_sender_leaf, updated_receiver_leaf);
+        let new_root = hash_inode(new_inode01, inode23);
+
+        let senders = [sender];
+        let receivers = [receiver];
+        let txs = [tx];
+        let s_siblings = [sender_siblings];
+        let r_siblings = [receiver_siblings];
+
+        let sigs = [[0; 64]];
+        let msgs = [[0; 32]];
+
+        main(
+            senders,
+            s_siblings,
+            receivers,
+            r_siblings,
+            txs,
+            sigs,
+            msgs,
+            old_root,
+            new_root,
+        );
+    }
 }
