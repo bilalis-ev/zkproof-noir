@@ -1,0 +1,36 @@
+old_root = "0x2205562d0e24c6efa50c4a04b839a947d9422ade3a8f73cbcb1ce1b94e7ccac3"
+new_root = "0x27e78464f40ad9bcfb5c6355617e9cde3de3c6446f16673d7acc583ff23a351f"
+sender_siblings = [["0x117a7277bfd606fdebdc050e6ae90d6fa740a00edc9e1be291381aa7af851677", "0x2a90e8adc2472ff5cfabbc943f7f6caaf0b5332599b2f8b028a892a35ae69b5a", "0x0bcd1f91cf7bdd471d0a30c58c4706f3fdab3807a954b8f5b5e3bfec87d001bb", "0x06e62084ee7b602fe9abc15632dda3269f56fb0c6e12519a2eb2ec897091919d"], ["0x1aba131e868aefc2c175aada07645d49d433f4dde152f71d5f34b807082e3645", "0x1d2e50b1a857f5f9e7d0ae3668a75cabbe59ee02496326d62afe3985b4a619f9", "0x0bcd1f91cf7bdd471d0a30c58c4706f3fdab3807a954b8f5b5e3bfec87d001bb", "0x06e62084ee7b602fe9abc15632dda3269f56fb0c6e12519a2eb2ec897091919d"]]
+receiver_siblings = [["0x125f1445c81552c3cbdb95181f3703f7474f9c5447c6fb91fabd932d28568728", "0x2a90e8adc2472ff5cfabbc943f7f6caaf0b5332599b2f8b028a892a35ae69b5a", "0x0bcd1f91cf7bdd471d0a30c58c4706f3fdab3807a954b8f5b5e3bfec87d001bb", "0x06e62084ee7b602fe9abc15632dda3269f56fb0c6e12519a2eb2ec897091919d"], ["0x21893794d146b5e2eaa6c146e8a8971d6f7e8573c681fdc9d2d805917ebf6b8f", "0x1d2e50b1a857f5f9e7d0ae3668a75cabbe59ee02496326d62afe3985b4a619f9", "0x0bcd1f91cf7bdd471d0a30c58c4706f3fdab3807a954b8f5b5e3bfec87d001bb", "0x06e62084ee7b602fe9abc15632dda3269f56fb0c6e12519a2eb2ec897091919d"]]
+
+# --- TX 1: acc0 (balance:1000, nonce:0) sends 50 to acc1 ---
+[[senders]]
+balance = 1000
+nonce = 0
+
+# --- TX 2: acc2 (balance:200, nonce:0) sends 30 to acc3 ---
+[[senders]]
+balance = 200
+nonce = 0
+
+# --- TX 1 receiver: acc1 ---
+[[receivers]]
+balance = 500
+nonce = 0
+
+# --- TX 2 receiver: acc3 ---
+[[receivers]]
+balance = 100
+nonce = 0
+
+[[txs]]
+sender_index = 0
+receiver_index = 1
+amount = 50
+sender_nonce = 0
+
+[[txs]]
+sender_index = 2
+receiver_index = 3
+amount = 30
+sender_nonce = 0
