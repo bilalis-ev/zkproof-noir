@@ -1,0 +1,18 @@
+old_root = "0x25b50677d6378ff9bcec59a03f50d0b24ce62387b931f87c225a09f507439047"
+new_root = "0x0c8d84b44c4d511d54b6c3ce383ad69fd68f111fa299227c51c40ded3b3acdbb"
+sender_siblings = [["0x1f7aac9a390f5383acc76e230c8d513305f46082d06f464c6b4e059d1f22f203", "0x18a95634756745bccc0bd94c79c3477c93e9a7c8da3371b8f7e80db299cc9565"]]
+receiver_siblings = [["0x01d86bce985c4e3319630f0bc52310791fae2b44fea9af5e5d80cfea1e53b193", "0x18a95634756745bccc0bd94c79c3477c93e9a7c8da3371b8f7e80db299cc9565"]]
+
+[[senders]]
+balance = "100"
+nonce = "0"
+
+[[receivers]]
+balance = "50"
+nonce = "0"
+
+[[txs]]
+sender_index = "0"
+receiver_index = "1"
+amount = "10"
+sender_nonce = "0"
